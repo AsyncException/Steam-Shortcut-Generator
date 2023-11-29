@@ -4,14 +4,14 @@ mod string_functions;
 use data::Game;
 use core::panic;
 use winreg::RegKey;
-use std::{fs::OpenOptions, path::Path, io::Write};
+use std::{fs::OpenOptions, path::Path, io::{Write, self, ErrorKind}};
 
 
 const ROOT_SHORTCUT_PATH: &str = "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Games\\";
 
 fn main() {
     let games = get_steam_games();
-    write_game_shortcut(games);
+    write_game_shortcuts(games);
 }
 
 fn get_steam_games() -> Vec<Game> {
@@ -38,29 +38,56 @@ fn get_steam_games() -> Vec<Game> {
     return game_list;
 }
 
-fn write_game_shortcut(games: Vec<Game>) {
+fn write_game_shortcuts(games: Vec<Game>) {
     for game in games {
         let shortcut_path = format!("{}{}.url", ROOT_SHORTCUT_PATH, game.display_name);
 
-        if !(Path::new(&shortcut_path).exists()) {
-            let mut file = match OpenOptions::new()
-                .create_new(true)
-                .write(true)
-                .append(true)
-                .open(shortcut_path) {
-                    Ok(value) => value,
-                    Err(_e) => { println!("Unable to write file, this is most likely a permission issue"); return; },
-                    
-                };
-            
-            writeln!(file, "[InternetShortcut]").expect("Unable to write to file");
-            writeln!(file, "URL=steam://rungameid/{}", game.id).expect("Unable to write to file");
-    
-            // Optionally, specify the icon path
-            if !game.display_icon.is_empty() {
-                writeln!(file, "IconFile={}", game.display_icon).expect("Unable to write to file");
-                writeln!(file, "IconIndex=0").expect("Unable to write to file");
-            }
+        if !Path::new(&shortcut_path).exists() {
+            write_shortcut(game, shortcut_path);
         }
+    }
+}
+
+fn write_shortcut(game: Game, shortcut_path: String) {
+    let file_result = OpenOptions::new()
+    .create_new(true)
+    .write(true)
+    .open(shortcut_path);
+
+    if let Err(ref e) = file_result {
+        let err_kind = e.kind();
+
+        if err_kind == io::ErrorKind::PermissionDenied {
+            println!("Permission denied error while creating shortuct for {}", game.display_name);
+            return;
+        } else {
+            println!("Error while making shortcut for {}\n{}", game.display_name, err_kind);
+            return;
+        }
+    };
+
+    let mut file = file_result.unwrap();
+        
+    match writeln!(file, "[InternetShortcut]") {
+        Ok(_v) => (),
+        Err(e) => println!("Unable to write type to shortcut {}\n{}", game.display_name, e.kind()),
+    };
+
+    match writeln!(file, "URL=steam://rungameid/{}", game.id) {
+        Ok(_v) => (),
+        Err(e) => println!("Unable to write URL to shortcut {}\n{}", game.display_name, e.kind()),
+    };
+
+    // Optionally, specify the icon path
+    if !game.display_icon.is_empty() && Path::new(&game.display_icon).exists() {
+        match writeln!(file, "IconFile={}", game.display_icon) {
+            Ok(_v) => (),
+            Err(e) => println!("Unable to write icon file to shortcut {}\n{}", game.display_name, e.kind()),
+        };
+        
+        match writeln!(file, "IconIndex=0") {
+            Ok(_v) => (),
+            Err(e) => println!("Unable to write icon index to shortcut {}\n{}", game.display_name, e.kind()),
+        };
     }
 }
