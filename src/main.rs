@@ -4,7 +4,7 @@ mod string_functions;
 use data::Game;
 use core::panic;
 use winreg::RegKey;
-use std::{fs::OpenOptions, path::Path, io::{Write, self, ErrorKind}};
+use std::{fs::OpenOptions, path::Path, io::{Write, self}};
 
 
 const ROOT_SHORTCUT_PATH: &str = "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Games\\";
