@@ -1,4 +1,5 @@
-mod  data;
+mod data;
+mod string_functions;
 
 use data::Game;
 use core::panic;
@@ -27,9 +28,8 @@ fn get_steam_games() -> Vec<Game> {
     for i in main_key.enum_keys().map(|x| x.unwrap()).filter(|x| x.starts_with("Steam App")) {
         let key = RegKey::predef(hive).open_subkey(format!("{}\\{}", key_path, i)).unwrap();
         
-        let key_chars = i.chars();
-        let space_index = i.rfind(' ').unwrap();
-        let id = key_chars.skip(space_index + 1).collect();
+        let id = string_functions::substring_at_last(i, ' ');
+
         let display_name: String = key.get_value("DisplayName").expect("Unable to get display name");
         let display_icon: String = key.get_value("DisplayIcon").expect("Unable to get display icon");
         game_list.push(Game::new(id, display_name, display_icon))
@@ -49,7 +49,8 @@ fn write_game_shortcut(games: Vec<Game>) {
                 .append(true)
                 .open(shortcut_path) {
                     Ok(value) => value,
-                    Err(_e) => { println!("Unable to write file, this is most likely a permission issue"); return; }
+                    Err(_e) => { println!("Unable to write file, this is most likely a permission issue"); return; },
+                    
                 };
             
             writeln!(file, "[InternetShortcut]").expect("Unable to write to file");
