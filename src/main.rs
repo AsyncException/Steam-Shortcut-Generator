@@ -24,7 +24,6 @@ fn get_steam_games() -> Vec<Game> {
         Err(_e) => panic!("Unable to find: SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"),
     };
 
-
     let mut game_list = Vec::<Game>::new();
     for i in main_key.enum_keys().map(|x| x.unwrap()).filter(|x| x.starts_with("Steam App")) {
         let key = RegKey::predef(hive).open_subkey(format!("{}\\{}", key_path, i)).unwrap();
