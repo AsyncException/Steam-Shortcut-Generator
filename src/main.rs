@@ -2,6 +2,7 @@ mod data;
 mod string_functions;
 
 use data::Game;
+use regex::Regex;
 use core::panic;
 use winreg::RegKey;
 use std::{fs::OpenOptions, path::Path, io::{Write, self}};
@@ -39,8 +40,9 @@ fn get_steam_games() -> Vec<Game> {
 }
 
 fn write_game_shortcuts(games: Vec<Game>) {
+    let replace_regex = Regex::new(r#"[\/\\?%*:|"<>]"#).unwrap();
     for game in games {
-        let shortcut_path = format!("{}{}.url", ROOT_SHORTCUT_PATH, game.display_name);
+        let shortcut_path = format!("{}{}.url", ROOT_SHORTCUT_PATH, replace_regex.replace_all(&game.display_name, ""));
 
         if !Path::new(&shortcut_path).exists() {
             write_shortcut(game, shortcut_path);
